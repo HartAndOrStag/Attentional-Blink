@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Attentional Blink</title>
+    <script src="https://unpkg.com/jspsych@8.2.2"></script>
+    <script src="https://unpkg.com/@jspsych/plugin-html-keyboard-response@2.1.0"></script>
+    <link href="https://unpkg.com/jspsych@8.2.2/css/jspsych.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body></body>
+  <script>
+
+// initialize jsPsych
+const jsPsych = initJsPsych({
+    on_finish: function(){
+        jsPsych.data.displayData()
+    }
+})
+
+// create timeline
+const timeline = [];
+
+// define set of letters to be displayed
+const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 
+            'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
+            'X', 'Y', 'Z',];
+
+// define a sequence as shuffled letters array
+const sequence = jsPsych.randomization.shuffle(letters);
+
+// select random target letter
+const targetLetter = jsPsych.randomization.sampleWithoutReplacement(
+    // slice array to ensure last letter is not picked
+    letters.slice(0, -1), 1)[0];
+
+// determine which letter comes after the target    
+const nextLetter = sequence[sequence.indexOf(targetLetter) + 1];
+
+// define instructions
+const instructions = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: `<p>Your target letter is: <strong>${targetLetter}</strong></p>
+        <p>You will be shown a sequence of letters that will be  
+        quickly flashed in the center of the screen.</p>
+        <p>Your goal will be to determine which letter comes
+        immediately after the <strong>${targetLetter}</strong>.</p>
+        <p>Press any key to begin.</p>`,
+};
+
+// push instructions to timeline
+timeline.push(instructions);
+
+// define fixation cross
+const fixation = {
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<div style="font-size:72px;">+</div>`,
+        choices: "NO_KEYS",
+        trial_duration: 1000,
+    };
+
+// push fixation cross to timeline
+timeline.push(fixation);
+
+// push each letter to be flashed to the screen
+for (let i = 0; i < letters.length; ++i){
+    timeline.push({
+        type: jsPsychHtmlKeyboardResponse,
+        stimulus: `<div style="font-size:72px;">${sequence[i]}</div>`,
+        choices: "NO_KEYS",
+        trial_duration: 100,
+    });
+};
+
+// define user selection prompt
+const userSelection = {
+    type: jsPsychHtmlKeyboardResponse,
+    // choices include all of letters array mapped to lowercase
+    choices: letters.map(l => l.toLowerCase()),
+    stimulus: `<div style='font-size:32px'>Which letter followed the 
+        <strong>${targetLetter}</strong>?</div>`,
+    data: { targetLetter: targetLetter, 
+        nextLetter: nextLetter },
+    on_finish: data => {
+        data.selection = data.response;
+        data.correct = (data.response === data.nextLetter.toLowerCase());
+    },
+};
+
+// push user selection prompt to timeline
+timeline.push(userSelection);
+
+// define response feedback
+const feedback = {
+  type: jsPsychHtmlKeyboardResponse,
+  stimulus: () => {
+    const last = jsPsych.data.get().last(1).values()[0];
+    return `<div style='font-size:32px;'>Your answer: 
+            <strong>${last.selection.toUpperCase()}</strong></div>
+            <br></br>
+            <div style='font-size:32px'>Correct letter: 
+            <strong>${last.nextLetter}</strong></div>`;
+  },
+};
+
+// push feedback to timeline
+timeline.push(feedback);
+
+// run timeline
+jsPsych.run(timeline);
+  </script>
+</html>
